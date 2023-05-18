@@ -201,6 +201,85 @@ async function fAddScoreToScoresTable(req, res) {
   }
 }
 
+const calculateGPA = (score) => {
+  console.log("score: ", score);
+  let totalScore = 0;
+  let totalCredit = 0;
+  for (let i = 0; i < score.length; i++) {
+    totalCredit += score[i].subject.credits_number;
+    totalScore += score[i].subject.credits_number * score[i].score;
+  }
+
+  GPA = totalScore / totalCredit;
+  GPA = ((GPA / 10) * 4).toFixed(2);
+
+  if (isNaN(GPA)) return 0;
+  return GPA;
+};
+
+/** Tiên quyết : validateToken, getClassById, validateClassTeacher */
+async function fDownloadNGScoresClassByClassId(req, res) {
+  var classInstance = req.classInstance;
+  var senderInstance = req.senderInstance;
+  var members = classInstance.class_members;
+  let scores = await global.DBConnection.ScoresTable.find({
+    user_ref: { $in: members },
+  })
+    .populate({
+      path: "scores",
+      populate: {
+        path: "subject",
+      },
+    })
+    .populate("user_ref");
+
+  let newList = scores.filter((scr) => {
+    if (calculateGPA(scr.scores) < 2.5) return scr;
+  });
+
+  newList.forEach((item) => {
+    item.GPA = calculateGPA(item);
+  });
+
+  console.log("newlist: ", newList);
+  let result = [];
+
+  for (var i = 0; i < newList.length; i++) {
+    let scoreboard = newList[i];
+    let sv = scoreboard.user_ref;
+    console.log("res: ", sv);
+
+    let res = {
+      "Mã sinh viên": sv.vnu_id,
+      "Họ và tên": sv.name,
+      GPA: calculateGPA(newList[i].scores),
+      "SĐT học sinh": sv.phone_number,
+      "SĐT Phụ huynh": sv.parent_number,
+    };
+    result.push(res);
+  }
+  var xls = json2xls(result);
+  console.log(__dirname);
+  var file_path =
+    path.resolve(__dirname, "..", "..") +
+    "/public/data/" +
+    classInstance.class_name.toString().replace(" ", "") +
+    ".xls";
+  fs.writeFileSync(file_path, xls);
+  res.status(200);
+  if (scores) {
+    // res.json(RES_FORM("Success", result));
+    res.xls(
+      classInstance.class_name.toString().replace(" ", "") + ".xls",
+      result
+    );
+    return;
+  } else {
+    res.json(RES_FORM("Success", []));
+    return;
+  }
+}
+
 /** Tiên quyết : validateToken, getClassById, validateClassTeacher */
 async function fGetScoresClassByClassId(req, res) {
   var classInstance = req.classInstance;
@@ -261,8 +340,6 @@ async function fDownloadScoresClassByClassId(req, res) {
     "Số tín chỉ": null,
     Điểm: null,
   };
-
-  console.log("score: ", scores);
 
   for (var i = 0; i < scores.length; i++) {
     let scoreboard = scores[i];
@@ -439,6 +516,7 @@ async function fHandleUploadScore(req, res) {
   res.json(RES_FORM("Success", { registered: success, failed: fail }));
 }
 module.exports = {
+  fDownloadNGScoresClassByClassId,
   fDownloadScoresClassByClassId,
   fHandleUploadStatus,
   fGetScoresClassByClassId,

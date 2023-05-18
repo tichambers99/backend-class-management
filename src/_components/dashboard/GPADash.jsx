@@ -98,6 +98,7 @@ function GPADash(props) {
               var GPA = 0;
               var totalCredit = 0;
               var totalScore = 0;
+              // eslint-disable-next-line no-loop-func
               scoreObj.forEach((scoreElement) => {
                 if (semFilterState == "nofilter") {
                   totalCredit += scoreElement.subject.credits_number;
@@ -201,10 +202,24 @@ function GPADash(props) {
     console.log(semFilterState);
   }
 
+  function handleSubmit() {
+    console.log(props.classId);
+    var generated =
+      "http://localhost:8081/api/scores/download/" +
+      "98a1afa8-4543-4657-9a51-832654211ea4" +
+      "/ng_score";
+    openInNewTab(generated);
+  }
+
+  const openInNewTab = (url) => {
+    const newWindow = window.open(url, "_blank", "noopener,noreferrer");
+    if (newWindow) newWindow.opener = null;
+  };
+
   return (
     <div className="p-4">
       <Row wrap="true">
-        <Card title="Trạng thái GPA" style={{ width: 300, height: 440 }}>
+        <Card title="Trạng thái GPA" style={{ width: 300, height: 500 }}>
           <PieChart
             width={800}
             height={200}
@@ -254,13 +269,21 @@ function GPADash(props) {
               </option>
             ))}
           </Select>
+          <Button
+            type="primary"
+            htmlType="submit"
+            onClick={handleSubmit}
+            style={{ marginTop: 20 }}
+          >
+            Tải danh sách sinh viên cảnh cáo
+          </Button>
           {/* <Select defaultValue={filterState} style={{ width: 120 }} data = {[{id}]}onChange={handleFilterChange} >
                             <Option value="nofilter">Không</Option>
                             <Option value="cchv">{"GPA<2.5"}</Option>
                             <Option value="duoihoc">{"GPA<1"}</Option>
                     </Select>                                       */}
         </Card>
-        <Card title="Danh sách sinh viên" style={{ width: 300, height: 440 }}>
+        <Card title="Danh sách sinh viên" style={{ width: 300, height: 500 }}>
           <div
             id="scrollableDiv"
             style={{
